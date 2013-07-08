@@ -25,11 +25,11 @@ object LinkingAnnotatorMain extends App {
     // Truecasing??
     POS1,
     // LemmaAnnotator,
-    // NER1,
-    FactorieNERComponent,
+    NER1,
+    //FactorieNERComponent,
     DepParser2,
-    ParseBasedMentionFinding
-    //KbBridgeEntityLinking
+    ParseBasedMentionFinding,
+    KbBridgeEntityLinking
   )
 
   val p = new Parameters()
@@ -88,6 +88,7 @@ object LinkingAnnotatorMain extends App {
 
             // val doc = new Document(textDoc)
 
+           // println(doc.tokens.mkString())
             doc.setName(gDoc.name)
             for (step <- nlpSteps) {
               step.process1(doc)
@@ -125,7 +126,8 @@ object Text2FactorieDoc {
       } else {
       text.text.replace("\n", " ")
     }
-    val cleanLayout = removeLayout(headlineText ++ "\n\n" + mText)
+    val cleanLayout = removeLayout(headlineText ++ ". \n\n" + mText)
+    println("TEXT:\n" + cleanLayout)
     new Document(cleanLayout)
   }
 
