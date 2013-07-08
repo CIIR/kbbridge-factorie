@@ -17,7 +17,7 @@ import cc.factorie.app.nlp.ner.{NER1, NER2}
 import cc.factorie.app.nlp.parse.DepParser2
 import cc.factorie.app.nlp.mention.ParseBasedMentionFinding
 
-object DocumentAnnotatorMain extends App {
+object LinkingAnnotatorMain extends App {
 
   val nlpSteps = Seq(
 
@@ -26,9 +26,10 @@ object DocumentAnnotatorMain extends App {
     POS1,
     // LemmaAnnotator,
     // NER1,
+    FactorieNERComponent,
     DepParser2,
-    ParseBasedMentionFinding,
-    KbBridgeEntityLinking
+    ParseBasedMentionFinding
+    //KbBridgeEntityLinking
   )
 
   val p = new Parameters()
