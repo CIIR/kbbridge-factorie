@@ -58,6 +58,25 @@
     </repositories>
 
  <dependencies>
+
+<dependency>
+	<groupId>com.typesafe</groupId>
+	<artifactId>scalalogging-slf4j_2.10</artifactId>
+	<version>1.0.1</version>
+</dependency>
+
+<dependency> 
+  <groupId>org.slf4j</groupId>
+  <artifactId>slf4j-jdk14</artifactId>
+  <version>1.7.2</version>
+</dependency>
+
+<dependency>
+	<groupId>org.slf4j</groupId>
+	<artifactId>slf4j-api</artifactId>
+	<version>1.7.2</version>
+</dependency>
+
    <dependency>
    <groupId>cc.factorie</groupId>
     <artifactId>factorie</artifactId>
@@ -84,7 +103,7 @@
 
    <dependency>
             <groupId>cc.factorie.app.nlp</groupId>
-            <artifactId>factorie-nlp-lexicons</artifactId>
+            <artifactId>factorie-nlp-resources</artifactId>
             <version>0.1-SNAPSHOT</version>
    </dependency>
 
@@ -121,7 +140,7 @@
             <configuration>
                 <archive>
                     <manifest>
-                        <mainClass>cc.factorie.nlp.el.KbBridgeEntityLinking</mainClass>
+                        <mainClass>cc.factorie.app.nlp.el.LinkingAnnotatorMain</mainClass>
                     </manifest>
                 </archive>
                 <descriptorRefs>
