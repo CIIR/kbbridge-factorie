@@ -49,17 +49,19 @@ object KbBridgeEntityLinking extends DocumentAnnotator with Logging {
 
   def prereqAttrs: Iterable[Class[_]] = List(classOf[BilouConllNerLabel], classOf[MentionList])
   def postAttrs: Iterable[Class[_]] = List(classOf[WikiEntityMentions])
-  def process1(doc:Document): Document = {
+  def process(doc:Document): Document = {
 
     val mentionsToReturn = new WikiEntityMentions
 
-    val neighbors = doc.attr[cc.factorie.app.nlp.mention.MentionList].filter(m => {
+    val neighbors = doc.attr[cc.factorie.app.nlp.mention.MentionList]
+
+    val namedMentions = neighbors.filter(m => {
       val mType = m.attr[MentionType].categoryValue
-      mType equals "NAM"
+      (mType equals "NAM")
     })
 
 
-    val allNers = neighbors.map(m =>  {
+    val allNers = namedMentions.map(m =>  {
       val eTypeAttr = m.attr[MentionEntityType]
       val eType = if (eTypeAttr != null) {
         eTypeAttr.categoryValue
@@ -76,11 +78,9 @@ object KbBridgeEntityLinking extends DocumentAnnotator with Logging {
     }
     )
 
-
-
     val text = doc.tokens.map(t => t.string).mkString(" ")
 
-    val groupedMentions = neighbors.groupBy(m => cleanMentionString(m)).filterKeys(m => m.length > 1)
+    val groupedMentions = namedMentions.groupBy(m => cleanMentionString(m)).filterKeys(m => m.length > 1)
     mentionsToReturn ++= groupedMentions.map(m => linkEntity(m._2, doc, text, allNers)).flatten
 //    mentionsToReturn ++= neighbors.map(m => linkEntity(Seq(m), doc, text, allNers)).flatten
 
@@ -92,8 +92,15 @@ object KbBridgeEntityLinking extends DocumentAnnotator with Logging {
 
   def cleanMentionString(mention : Mention) = {
     val cleanTokens = new ListBuffer[String]
-    for (i <- 0 until mention.span.length) {
-      val token = mention.span.tokens(i)
+
+    val mType = mention.attr[MentionType].categoryValue
+    val tokens = mType match {
+      case "NOM" => mention.span.tokens.filter(t => t.posLabel.categoryValue.toUpperCase.startsWith("NN"))
+      case "NAM" => mention.span.tokens.filter(t => t.posLabel.categoryValue.toUpperCase.startsWith("NN"))
+      case _ => mention.span.tokens
+    }
+
+   for (token <- tokens) {
       val normalToken = TextNormalizer.normalizeText(token.string).replace(" ", "")
       if (normalToken.length() > 0 && !Stopwords.contains(normalToken)) {
         cleanTokens += normalToken

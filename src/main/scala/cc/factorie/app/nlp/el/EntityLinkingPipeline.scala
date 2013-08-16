@@ -12,59 +12,79 @@ import scala.xml.{NodeSeq, XML}
 import org.xml.sax.InputSource
 import cc.factorie.CategoricalVar
 import com.typesafe.scalalogging.slf4j.Logging
+import org.lemurproject.galago.core.parse.TagTokenizer
 
 //import com.googlecode.clearnlp.morphology.EnglishMPAnalyzer
 
 import cc.factorie.app.nlp.ner.NER1
-import cc.factorie.app.nlp.parse.DepParser2
-import cc.factorie.app.nlp.mention.{MentionType, ParseBasedMentionFinding}
+import cc.factorie.app.nlp.parse.DepParser1
+import cc.factorie.app.nlp.mention.{NerAndPronounMentionFinder, MentionType, ParseBasedMentionFinding}
 
 object LinkingAnnotatorMain extends App with Logging {
 
-  val nlpSteps = Seq(
-
-    ClearSegmenter,
-    // Truecasing??
-    POS1,
-    // LemmaAnnotator,
-    NER1,
-    //FactorieNERComponent,
-    DepParser2,
-    ParseBasedMentionFinding,
-    KbBridgeEntityLinking
-  )
-
-  val p = new Parameters()
-
-  var docs: Seq[String] = args(0).split(",").toSeq
+  val testMode = true
+  var docIds: Seq[String] = args(0).split(",").toSeq
   val outputDir: File = new File(args(2))
-  p.set("index", args(1))
+
   //outputDir = new File(args(2))
   if (!outputDir.exists()) {
     outputDir.mkdirs()
   }
 
-  println("docs to annotate: " + docs.size)
+  println("docs to annotate: " + docIds.size)
 
-
-  if (workTodo(docs)) {
+  val p = new Parameters()
+  p.set("index", args(1))
+  if (testMode || workTodo(docIds)) {
     p.set("terms", true)
     p.set("tags", true)
     val retrieval = RetrievalFactory.instance(p)
 
-    annotateDocs(docs, retrieval)
+
+
+    annotateDocs(docIds, retrieval)
+  }
+
+  def docFromFile(file: File) : org.lemurproject.galago.core.parse.Document = {
+
+    val source = scala.io.Source.fromFile(file)
+    val lines = source.mkString
+    source.close()
+
+    val d = new org.lemurproject.galago.core.parse.Document(file.getName(), lines)
+    val tt = new TagTokenizer()
+    tt.process(d)
+    d
   }
 
   def annotateDocs(docs: Seq[String], retrieval: Retrieval) = {
-    var numAnnotated = 0
+
+    val nlpSteps = Seq(
+
+      // Truecasing??
+      POS1,
+      // LemmaAnnotator,
+      NER1,
+      //FactorieNERComponent,
+      DepParser1,
+      NerAndPronounMentionFinder/*,
+      KbBridgeEntityLinking     */
+    )
+
+
+    val map = new MutableDocumentAnnotatorMap ++= DocumentAnnotatorPipeline.defaultDocumentAnnotationMap
+    for (annotator <- nlpSteps) map += annotator
+    val pipeline = DocumentAnnotatorPipeline(nlpSteps.flatMap(_.postAttrs), prereqs=Seq(), map=map.toMap)
+
+
     for (docId <- docs) {
       val outputFile = new File(outputDir.getAbsolutePath + File.separator + docId + ".xml")
 
-      if (!outputFile.exists()) {
+      if (testMode || !outputFile.exists()) {
         val gDoc = retrieval.getDocument(docId, p)
 
         if (gDoc != null) {
-          println("Annotating document: " + docId + " numAnnotated:" + numAnnotated)
+          println("Annotating document: " + docId )
 
 
           //val docXml = XML.loadString(gDoc.text)
@@ -83,13 +103,10 @@ object LinkingAnnotatorMain extends App with Logging {
 
           // val doc = new Document(textDoc)
 
-          // println(doc.tokens.mkString())
-          import Implicits.defaultDocumentAnnotatorMap
 
           doc.setName(gDoc.name)
-          for (step <- nlpSteps) {
-            step.process(doc)
-          }
+          pipeline.process(doc)
+
           println("Processed %d tokens.".format(doc.tokenCount))
           println(doc.owplString(nlpSteps.map(p => p.tokenAnnotationString(_))))
 
@@ -97,6 +114,8 @@ object LinkingAnnotatorMain extends App with Logging {
           //println(xml.toString)
 
           XML.save(outputFile.getAbsolutePath, xml, "UTF-8")
+        } else {
+          println("Unable to process document: " + docId)
         }
       }
 
@@ -132,7 +151,8 @@ object Text2FactorieDoc {
     } else {
       text.text.replace("\n", " ")
     }
-    val cleanLayout = removeLayout(headlineText ++ ". \n\n" + mText)
+    // punctuation hack to ensure that the end of document gets detected.
+    val cleanLayout = removeLayout(headlineText ++ ". \n\n" + mText) + "."
    // println("TEXT:\n" + cleanLayout)
     new Document(cleanLayout)
   }
@@ -200,7 +220,7 @@ object Document2XmlRenderer {
               {getAttr(token, NER1.tokenAnnotationString(_))}
             </NER>
             <PARSE>
-              {getAttr(token, DepParser2.tokenAnnotationString(_))}
+              {getAttr(token, DepParser1.tokenAnnotationString(_))}
             </PARSE>
             <StartSentence>
               {token.isSentenceStart}
@@ -229,7 +249,7 @@ object Document2XmlRenderer {
               {m.span.tokens.start + m.span.tokens.length}
             </TokenEnd>
           </mention>}
-        </mentions>
+        </mentions>{if (doc.attr[WikiEntityMentions] != null) {
         <kblinks>
           {for (linkedMention <- doc.attr[WikiEntityMentions]) yield
           <entitylink>
@@ -261,6 +281,7 @@ object Document2XmlRenderer {
             </candidate>}
           </entitylink>}
         </kblinks>
+      }}
       </document>
     </root>
   }
