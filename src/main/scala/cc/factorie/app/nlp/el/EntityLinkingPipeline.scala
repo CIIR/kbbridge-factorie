@@ -8,11 +8,12 @@ import java.io.{StringReader, File}
 import org.lemurproject.galago.tupleflow.Parameters
 import scala.xml.parsing.ConstructingParser
 import scala.io.Source
-import scala.xml.{NodeSeq, XML}
+import scala.xml.{Node, NodeSeq, XML}
 import org.xml.sax.InputSource
 import cc.factorie.CategoricalVar
 import com.typesafe.scalalogging.slf4j.Logging
 import org.lemurproject.galago.core.parse.TagTokenizer
+import scala.xml.pull.{EvText, EvElemEnd, EvElemStart, XMLEventReader}
 
 //import com.googlecode.clearnlp.morphology.EnglishMPAnalyzer
 
@@ -39,9 +40,7 @@ object LinkingAnnotatorMain extends App with Logging {
     p.set("terms", true)
     p.set("tags", true)
     val retrieval = RetrievalFactory.instance(p)
-
-
-
+    println("Starting annotation:")
     annotateDocs(docIds, retrieval)
   }
 
@@ -67,21 +66,25 @@ object LinkingAnnotatorMain extends App with Logging {
       NER1,
       //FactorieNERComponent,
       DepParser1,
-      NerAndPronounMentionFinder/*,
-      KbBridgeEntityLinking     */
+      NerAndPronounMentionFinder,
+      KbBridgeEntityLinking
     )
 
 
     val map = new MutableDocumentAnnotatorMap ++= DocumentAnnotatorPipeline.defaultDocumentAnnotationMap
     for (annotator <- nlpSteps) map += annotator
-    val pipeline = DocumentAnnotatorPipeline(nlpSteps.flatMap(_.postAttrs), prereqs=Seq(), map=map.toMap)
+    val pipeline = DocumentAnnotatorPipeline(map=map.toMap, prereqs=Nil, nlpSteps.flatMap(_.postAttrs))
 
 
     for (docId <- docs) {
       val outputFile = new File(outputDir.getAbsolutePath + File.separator + docId + ".xml")
 
       if (testMode || !outputFile.exists()) {
-        val gDoc = retrieval.getDocument(docId, p)
+        var gDoc = retrieval.getDocument(docId, p)
+
+        if (gDoc == null) {
+          gDoc = retrieval.getDocument(docId.toLowerCase(), p)
+        }
 
         if (gDoc != null) {
           println("Annotating document: " + docId )
@@ -89,7 +92,7 @@ object LinkingAnnotatorMain extends App with Logging {
 
           //val docXml = XML.loadString(gDoc.text)
           // val newsDoc = Text2FactorieDoc.newswire(b)
-
+          val doc = if (!(docId startsWith "bolt"))  {
           val parser = new org.ccil.cowan.tagsoup.jaxp.SAXFactoryImpl().newSAXParser()
           val adapter = new scala.xml.parsing.NoBindingFactoryAdapter
           val xmlDoc = adapter.loadXML(new InputSource(new StringReader(gDoc.text)), parser)
@@ -100,7 +103,10 @@ object LinkingAnnotatorMain extends App with Logging {
 
           val headline = xmlDoc \\ "HEADLINE"
           val doc = Text2FactorieDoc.news(headline, text)
-
+            doc
+          }  else {
+            Bolt2FactorieDoc.text2FactorieDoc(gDoc.text)
+          }
           // val doc = new Document(textDoc)
 
 
@@ -136,6 +142,92 @@ object LinkingAnnotatorMain extends App with Logging {
       }
     }
     workTodo
+  }
+
+}
+
+class Paragraph(val document:Document, val stringStart:Int, val stringEnd:Int) extends Section
+
+object Bolt2FactorieDoc {
+
+  var offset = 0
+  var start = 0
+  var inside : Boolean = false
+
+  def text2FactorieDoc(text:String) : Document = {
+    val d = new Document(text)
+    val src = Source.fromString(text)
+    val er = new XMLEventReader(src)
+    parse(er,d)
+    d
+  }
+
+  def parse(xml: XMLEventReader, d : Document) {
+    def loop(currNode: List[String]) {
+      if (xml.hasNext) {
+        xml.next match {
+          case EvElemStart(_, label, a, _) =>
+            //println("Start element: " + label)
+            if(label == "doc") {
+              val m = a.get("id").getOrElse(Seq[Node]()).head.toString()
+              d.setName(a.get("id").getOrElse(Seq[Node]()).head.toString())
+            }
+            loop(label :: currNode)
+          case EvElemEnd(_, label) =>
+            //println("End element: " + label)
+            if(currNode.head == ("post"))
+              addSection(d)
+            loop(currNode.tail)
+          case EvText(text) =>
+            addSection(text, currNode, d)
+            loop(currNode)
+          case _ => loop(currNode)
+        }
+      }
+    }
+    start = 0
+    offset = 0
+    loop(List.empty)
+  }
+
+
+  def addSection(text : String, currNode : List[String], d : Document) {
+    if(currNode.isEmpty) return
+    if(d.string.indexOf(text, offset) == -1) {
+      println(d.string + " cannot find: " + text)
+      println(text)
+      println("Offset: " + offset)
+      //println("After offset: " + d.string.substring(offset))
+      offset = d.string.indexOf(text)
+    }
+    if(currNode.head == "post") {
+      if(!inside) {
+        start = d.string.indexOf(text, offset)
+        inside = true
+      }
+      offset = d.string.indexOf(text, offset) + text.length
+    }
+    if(currNode.head == "quote") {
+      if(inside) {
+        if(offset > start && d.string.substring(start,offset).trim.length > 1) d += new Paragraph(d, start, offset)
+        start = d.string.indexOf(text, offset) + text.length
+        inside = false
+      } else {
+        start = d.string.indexOf(text, offset) + text.length
+      }
+      offset = d.string.indexOf(text, offset) + text.length
+    }
+    if(currNode.head == "a" && !currNode.contains("quote")) {
+      if(!inside) {
+        start = d.string.indexOf(text, offset)
+        inside = true
+      }
+      offset = d.string.indexOf(text, offset) + text.length + 4
+    }
+  }
+  def addSection(d : Document) {
+    inside = false
+    if(offset > start && d.string.substring(start,offset).trim.length > 1) d += new Paragraph(d, start, offset)
   }
 
 }

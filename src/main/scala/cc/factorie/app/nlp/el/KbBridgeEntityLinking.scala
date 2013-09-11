@@ -80,8 +80,9 @@ object KbBridgeEntityLinking extends DocumentAnnotator with Logging {
 
     val text = doc.tokens.map(t => t.string).mkString(" ")
 
-    val groupedMentions = namedMentions.groupBy(m => cleanMentionString(m)).filterKeys(m => m.length > 1)
-    mentionsToReturn ++= groupedMentions.map(m => linkEntity(m._2, doc, text, allNers)).flatten
+    val groupedMentions = namedMentions.groupBy(m => cleanMentionString(m))
+    val filtered = groupedMentions.filterKeys(m => m.length > 1)
+    mentionsToReturn ++= filtered.map(m => linkEntity(m._2, doc, text, allNers)).flatten
 //    mentionsToReturn ++= neighbors.map(m => linkEntity(Seq(m), doc, text, allNers)).flatten
 
     doc.attr +=  mentionsToReturn
@@ -96,13 +97,13 @@ object KbBridgeEntityLinking extends DocumentAnnotator with Logging {
     val mType = mention.attr[MentionType].categoryValue
     val tokens = mType match {
       case "NOM" => mention.span.tokens.filter(t => t.posLabel.categoryValue.toUpperCase.startsWith("NN"))
-      case "NAM" => mention.span.tokens.filter(t => t.posLabel.categoryValue.toUpperCase.startsWith("NN"))
+     // case "NAM" => mention.span.tokens.filter(t => t.posLabel.categoryValue.toUpperCase.startsWith("NN"))
       case _ => mention.span.tokens
     }
 
    for (token <- tokens) {
       val normalToken = TextNormalizer.normalizeText(token.string).replace(" ", "")
-      if (normalToken.length() > 0 && !Stopwords.contains(normalToken)) {
+      if (normalToken.length() > 0) {
         cleanTokens += normalToken
       }
   }
