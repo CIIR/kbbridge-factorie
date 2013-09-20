@@ -7,7 +7,7 @@ import scala.Predef._
 import cc.factorie.app.nlp.mention.{MentionEntityType, MentionType, Mention, MentionList}
 import edu.umass.ciir.kbbridge.text2kb.KnowledgeBaseCandidateGenerator
 import edu.umass.ciir.kbbridge.RankLibReranker
-import edu.umass.ciir.kbbridge.util.{ConfInfo, KbBridgeProperties}
+import edu.umass.ciir.kbbridge.util.{NameDictionary, ConfInfo, KbBridgeProperties}
 import edu.umass.ciir.kbbridge.data.SimpleEntityMention
 import edu.umass.ciir.kbbridge.nlp.NlpData.NlpXmlNerMention
 import edu.umass.ciir.kbbridge.nlp.TextNormalizer
@@ -81,8 +81,10 @@ object KbBridgeEntityLinking extends DocumentAnnotator with Logging {
     val text = doc.tokens.map(t => t.string).mkString(" ")
 
     val groupedMentions = namedMentions.groupBy(m => cleanMentionString(m))
-    val filtered = groupedMentions.filterKeys(m => m.length > 1)
-    mentionsToReturn ++= filtered.map(m => linkEntity(m._2, doc, text, allNers)).flatten
+    val filtered = groupedMentions.filterKeys(m => (m.length > 1) && (m.length < 100)).filterKeys(!NameDictionary.DAY_MONTH_NAMES.contains(_))
+    println("Num mentions: " + groupedMentions.size + " filtered: " + filtered.size + " limit: 250.")
+    val limited = filtered take 250
+    mentionsToReturn ++= limited.map(m => linkEntity(m._2, doc, text, allNers)).flatten
 //    mentionsToReturn ++= neighbors.map(m => linkEntity(Seq(m), doc, text, allNers)).flatten
 
     doc.attr +=  mentionsToReturn
@@ -127,10 +129,10 @@ object KbBridgeEntityLinking extends DocumentAnnotator with Logging {
 
 
     val bridgeMention = new SimpleEntityMention(d.name, eType, (d.name +"_s"+ (start) +"-" +(end)),
-      entityName=cleanMentionString(mention), fullText=text, Seq(), nerNeighbors=allNers, "")
+      entityName=cleanMentionString(mention), fullText=text, corefChain=Seq(), nerNeighbors=allNers, groundTruth="")
 
     println("Fetching candidates for mention: " + bridgeMention.mentionId + " d:" + bridgeMention.docId + " name:" + bridgeMention.entityName)
-    val candidates = candidateGenerator.retrieveCandidates(bridgeMention, ConfInfo.maxEntityCandidates)
+    val candidates = candidateGenerator.retrieveCandidates(bridgeMention, 50)
 
     val t0 = System.currentTimeMillis
     val rerankedResults = reranker.rerankCandidatesGenerateFeatures(bridgeMention, candidates).toSeq

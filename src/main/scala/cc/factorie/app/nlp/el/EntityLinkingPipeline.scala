@@ -17,11 +17,13 @@ import scala.xml.pull.{EvText, EvElemEnd, EvElemStart, XMLEventReader}
 
 //import com.googlecode.clearnlp.morphology.EnglishMPAnalyzer
 
-import cc.factorie.app.nlp.ner.NER1
+import cc.factorie.app.nlp.ner.{NER3NoEmbeddings, NER3, NER1}
 import cc.factorie.app.nlp.parse.DepParser1
 import cc.factorie.app.nlp.mention.{NerAndPronounMentionFinder, MentionType, ParseBasedMentionFinding}
 
 object LinkingAnnotatorMain extends App with Logging {
+
+  println(System.getProperty("file.encoding"))
 
   val testMode = true
   var docIds: Seq[String] = args(0).split(",").toSeq
@@ -63,13 +65,15 @@ object LinkingAnnotatorMain extends App with Logging {
       // Truecasing??
       POS1,
       // LemmaAnnotator,
-      NER1,
+      NER3NoEmbeddings,
       //FactorieNERComponent,
       DepParser1,
       NerAndPronounMentionFinder,
-      KbBridgeEntityLinking
+      KbBridgeEntityLinking       
     )
 
+  //  NER3.ChainNer2FeaturesDomain.freeze()
+ //   NER3.ChainNerFeaturesDomain.freeze()
 
     val map = new MutableDocumentAnnotatorMap ++= DocumentAnnotatorPipeline.defaultDocumentAnnotationMap
     for (annotator <- nlpSteps) map += annotator
@@ -245,7 +249,7 @@ object Text2FactorieDoc {
     }
     // punctuation hack to ensure that the end of document gets detected.
     val cleanLayout = removeLayout(headlineText ++ ". \n\n" + mText) + "."
-   // println("TEXT:\n" + cleanLayout)
+    // println("TEXT:\n" + cleanLayout)
     new Document(cleanLayout)
   }
 
@@ -309,7 +313,7 @@ object Document2XmlRenderer {
               {token.stringEnd}
             </CharacterOffsetEnd>
             <NER>
-              {getAttr(token, NER1.tokenAnnotationString(_))}
+              {getAttr(token, NER3NoEmbeddings.tokenAnnotationString(_))}
             </NER>
             <PARSE>
               {getAttr(token, DepParser1.tokenAnnotationString(_))}

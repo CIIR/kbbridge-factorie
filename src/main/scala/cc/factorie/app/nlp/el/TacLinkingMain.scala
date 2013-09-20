@@ -6,16 +6,17 @@ import org.lemurproject.galago.core.retrieval.{Retrieval, RetrievalFactory}
 import edu.umass.ciir.kbbridge.tac.TacQueryUtil
 import cc.factorie.app.nlp.pos._
 import edu.umass.ciir.kbbridge.data.{IdMap, ScoredWikipediaEntity, TacEntityMention}
-import cc.factorie.app.nlp.ner.NER1
+import cc.factorie.app.nlp.ner.{NER3NoEmbeddings, NER1}
 import cc.factorie.app.nlp.parse.DepParser1
 import cc.factorie.app.nlp.mention.{MentionEntityType, MentionType, NerAndPronounMentionFinder}
 import cc.factorie.app.nlp.{Document, DocumentAnnotatorPipeline, MutableDocumentAnnotatorMap}
 import org.xml.sax.InputSource
 import scala.xml.XML
 import edu.umass.ciir.kbbridge.util.KbBridgeProperties
-import edu.umass.ciir.kbbridge.text2kb.KnowledgeBaseCandidateGenerator
+import edu.umass.ciir.kbbridge.text2kb.{GalagoDoc2WikipediaEntity, QVMLocalTextEntityRepr, KnowledgeBaseCandidateGenerator}
 import edu.umass.ciir.kbbridge.RankLibReranker
 import edu.umass.ciir.kbbridge.nlp.NlpData.NlpXmlNerMention
+import edu.umass.ciir.kbbridge.search.{DocumentBridgeMap, EntityRetrievalWeighting, EntityReprRetrieval}
 
 /**
  * Created with IntelliJ IDEA.
@@ -68,7 +69,7 @@ object TacLinkingMain extends App {
 
   def annotateMentions(mentions: Seq[TacEntityMention], retrieval: Retrieval) = {
 
-    val candidateGenerator = KnowledgeBaseCandidateGenerator()
+    val candidateGenerator = DocumentBridgeMap.getKbRetrieval
     val reranker = new RankLibReranker(KbBridgeProperties.rankerModelFile)
 
     val nlpSteps = Seq(
@@ -76,9 +77,9 @@ object TacLinkingMain extends App {
       // Truecasing??
       POS1,
       // LemmaAnnotator,
-      NER1,
+      NER3NoEmbeddings,
       //FactorieNERComponent,
-      DepParser1,
+      //DepParser1,
       NerAndPronounMentionFinder
     )
 
@@ -137,17 +138,30 @@ object TacLinkingMain extends App {
             text = Some(text) )
 
           println("Fetching candidates for mention: " + m.mentionId + " d:" + m.docId + " name:" + m.entityName)
-          val candidates = candidateGenerator.retrieveCandidates(newMention, 250)
+
+          val repr = QVMLocalTextEntityRepr.createEntityRepr(newMention)
+          val query = EntityReprRetrieval.buildRawQuery(repr,EntityRetrievalWeighting(0.31, 0.38, 0.0, 0.31), false, 0)
+          val numCands =  250
+          //println("running query: " + query + " num cands: " + numCands)
 
           val t0 = System.currentTimeMillis
-          val rerankedResults = reranker.rerankCandidatesGenerateFeatures(newMention, candidates).toSeq
+          val retrievedCands = candidateGenerator.retrieveScoredDocuments(query, numCands)
           val t1 = System.currentTimeMillis()
-          val diff = t1 - t0
-          println(s"Reranking time: $diff")
+          val diff = t1-t0
+          println(s"Query: $query time: $diff cands: $numCands")
+
+          val candidates = GalagoDoc2WikipediaEntity.galagoResultToWikipediaEntities(retrievedCands)
+
+          val t2 = System.currentTimeMillis
+          val rerankedResults = reranker.rerankCandidatesGenerateFeatures(newMention, candidates).toSeq
+          val t3 = System.currentTimeMillis()
+          val diff2 = t3 - t2
+          println(s"Reranking time: $diff2")
 
           val xml = LinkedMention2XmlRenderer.xml(newMention, rerankedResults, candidates)
           //println(xml.toString)
 
+          println("writing results: " + outputFile.getAbsolutePath)
           XML.save(outputFile.getAbsolutePath, xml, "UTF-8")
         } else {
           println("Unable to process document: " + m.docId)
