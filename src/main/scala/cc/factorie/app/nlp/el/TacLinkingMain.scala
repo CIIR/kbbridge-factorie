@@ -6,8 +6,8 @@ import org.lemurproject.galago.core.retrieval.{Retrieval, RetrievalFactory}
 import edu.umass.ciir.kbbridge.tac.TacQueryUtil
 import cc.factorie.app.nlp.pos._
 import edu.umass.ciir.kbbridge.data.{IdMap, ScoredWikipediaEntity, TacEntityMention}
-import cc.factorie.app.nlp.ner.{NER3NoEmbeddings, NER1}
-import cc.factorie.app.nlp.parse.DepParser1
+import cc.factorie.app.nlp.ner.{NoEmbeddingsConllStackedChainNer}
+import cc.factorie.app.nlp.parse.{OntonotesTransitionBasedParser}
 import cc.factorie.app.nlp.mention.{MentionEntityType, MentionType, NerAndPronounMentionFinder}
 import cc.factorie.app.nlp.{Document, DocumentAnnotatorPipeline, MutableDocumentAnnotatorMap}
 import org.xml.sax.InputSource
@@ -74,12 +74,9 @@ object TacLinkingMain extends App {
 
     val nlpSteps = Seq(
 
-      // Truecasing??
-      POS1,
-      // LemmaAnnotator,
-      NER3NoEmbeddings,
-      //FactorieNERComponent,
-      //DepParser1,
+      OntonotesForwardPosTagger,
+      NoEmbeddingsConllStackedChainNer,
+      OntonotesTransitionBasedParser,
       NerAndPronounMentionFinder
     )
 
@@ -191,12 +188,12 @@ object TacLinkingMain extends App {
           "UNK"
         }
 
-        val charStart =   m.span.tokens.head.stringStart
-        val charEnd = m.span.tokens.last.stringEnd
-        val tokenStart = m.span.tokens.start
-        val tokenEnd = tokenStart + m.span.tokens.length
+        val charStart =   m.tokens.head.stringStart
+        val charEnd = m.tokens.last.stringEnd
+        val tokenStart = m.tokens.head.position
+        val tokenEnd = tokenStart + m.tokens.length
 
-        new NlpXmlNerMention(m.span.string, Seq(), -1, false, tokenStart, tokenEnd, charStart, charEnd, eType)
+        new NlpXmlNerMention(m.string, Seq(), -1, false, tokenStart, tokenEnd, charStart, charEnd, eType)
       }
       )
 

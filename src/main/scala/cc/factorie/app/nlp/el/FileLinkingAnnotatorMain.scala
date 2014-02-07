@@ -1,15 +1,15 @@
 package cc.factorie.app.nlp.el
 
 import cc.factorie.app.nlp._
-import cc.factorie.app.nlp.pos.POS1
+import cc.factorie.app.nlp.pos.{OntonotesForwardPosTagger, OntonotesChainPosTagger}
 import java.io.{ File}
 import scala.xml.XML
 import com.typesafe.scalalogging.slf4j.Logging
 import org.lemurproject.galago.core.parse.TagTokenizer
 
-import cc.factorie.app.nlp.ner.NER1
-import cc.factorie.app.nlp.parse.DepParser1
-import cc.factorie.app.nlp.mention.{NerAndPronounMentionFinder, ParseBasedMentionFinding}
+import cc.factorie.app.nlp.ner.{NoEmbeddingsConllStackedChainNer}
+import cc.factorie.app.nlp.parse.{OntonotesTransitionBasedParser}
+import cc.factorie.app.nlp.mention.{NerAndPronounMentionFinder}
 
 object FileLinkingAnnotatorMain extends App with Logging {
 
@@ -43,12 +43,9 @@ object FileLinkingAnnotatorMain extends App with Logging {
 
     val nlpSteps = Seq(
 
-      // Truecasing??
-      POS1,
-      // LemmaAnnotator,
-      NER1,
-      //FactorieNERComponent,
-      DepParser1,
+      OntonotesForwardPosTagger,
+      NoEmbeddingsConllStackedChainNer,
+      OntonotesTransitionBasedParser,
       NerAndPronounMentionFinder,
       KbBridgeEntityLinking
     )

@@ -4,11 +4,7 @@ import java.io.{StringReader, File}
 import org.lemurproject.galago.tupleflow.Parameters
 import org.lemurproject.galago.core.retrieval.{ScoredDocument, Retrieval, RetrievalFactory}
 import edu.umass.ciir.kbbridge.tac.TacQueryUtil
-import cc.factorie.app.nlp.pos._
 import edu.umass.ciir.kbbridge.data.{IdMap, SimpleEntityMention, ScoredWikipediaEntity, TacEntityMention}
-import cc.factorie.app.nlp.ner.NER3NoEmbeddings
-import cc.factorie.app.nlp.mention.{MentionEntityType, MentionType, NerAndPronounMentionFinder}
-import cc.factorie.app.nlp.{Document, DocumentAnnotatorPipeline, MutableDocumentAnnotatorMap}
 import org.xml.sax.InputSource
 import scala.xml.XML
 import edu.umass.ciir.kbbridge.util.{NameDictionary, KbBridgeProperties}
@@ -102,7 +98,7 @@ object TacLinkingMain2 extends App {
           (query, annotatedMention)
         } else {
           println("annotation file does not exist, using name query")
-          val galagoQuery = GalagoQueryLib.buildSeqDepForString(m.entityName, Seq(), false, 0)
+          val galagoQuery = GalagoQueryLib.buildSeqDepForString(m.entityName, Seq())
           (galagoQuery, m)
         }
 

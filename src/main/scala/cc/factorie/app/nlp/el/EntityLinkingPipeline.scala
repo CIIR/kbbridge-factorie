@@ -1,8 +1,6 @@
 package cc.factorie.app.nlp.el
 
 import cc.factorie.app.nlp._
-import cc.factorie.app.nlp.segment.ClearSegmenter
-import cc.factorie.app.nlp.pos.POS1
 import org.lemurproject.galago.core.retrieval.{RetrievalFactory, Retrieval}
 import java.io.{StringReader, File}
 import org.lemurproject.galago.tupleflow.Parameters
@@ -10,16 +8,16 @@ import scala.xml.parsing.ConstructingParser
 import scala.io.Source
 import scala.xml.{Node, NodeSeq, XML}
 import org.xml.sax.InputSource
-import cc.factorie.CategoricalVar
 import com.typesafe.scalalogging.slf4j.Logging
 import org.lemurproject.galago.core.parse.TagTokenizer
 import scala.xml.pull.{EvText, EvElemEnd, EvElemStart, XMLEventReader}
 
-//import com.googlecode.clearnlp.morphology.EnglishMPAnalyzer
 
-import cc.factorie.app.nlp.ner.{NER3NoEmbeddings, NER3, NER1}
-import cc.factorie.app.nlp.parse.DepParser1
 import cc.factorie.app.nlp.mention.{NerAndPronounMentionFinder, MentionType, ParseBasedMentionFinding}
+import cc.factorie.app.nlp.pos.{OntonotesForwardPosTagger, OntonotesChainPosTagger}
+import cc.factorie.app.nlp.ner.NoEmbeddingsConllStackedChainNer
+import cc.factorie.app.nlp.parse.OntonotesTransitionBasedParser
+import cc.factorie.variable.CategoricalVar
 
 object LinkingAnnotatorMain extends App with Logging {
 
@@ -63,11 +61,9 @@ object LinkingAnnotatorMain extends App with Logging {
     val nlpSteps = Seq(
 
       // Truecasing??
-      POS1,
-      // LemmaAnnotator,
-      NER3NoEmbeddings,
-      //FactorieNERComponent,
-      DepParser1,
+      OntonotesForwardPosTagger,
+      NoEmbeddingsConllStackedChainNer,
+      OntonotesTransitionBasedParser,
       NerAndPronounMentionFinder,
       KbBridgeEntityLinking       
     )
@@ -275,18 +271,18 @@ object Text2FactorieDoc {
 
 object Document2XmlRenderer {
 
-  def sgmlString(doc: Document): String = {
-    val buf = new StringBuffer
-    for (section <- doc.sections; token <- section.tokens) {
-      if (token.isSentenceStart) buf.append("<sentence>")
-      token.startsSpans.foreach(span => buf.append("<" + span.name + ">"))
-      buf.append(token.string)
-      token.endsSpans.foreach(span => buf.append("</" + span.name + ">"))
-      if (token.isSentenceEnd) buf.append("</sentence>")
-      buf.append(" ")
-    }
-    buf.toString
-  }
+//  def sgmlString(doc: Document): String = {
+//    val buf = new StringBuffer
+//    for (section <- doc.sections; token <- section.tokens) {
+//      if (token.isSentenceStart) buf.append("<sentence>")
+//      token.startsSpans.foreach(span => buf.append("<" + span.name + ">"))
+//      buf.append(token.string)
+//      token.endsSpans.foreach(span => buf.append("</" + span.name + ">"))
+//      if (token.isSentenceEnd) buf.append("</sentence>")
+//      buf.append(" ")
+//    }
+//    buf.toString
+//  }
 
   def xml(doc: Document) = {
     <root>
@@ -304,7 +300,7 @@ object Document2XmlRenderer {
               {token.string}
             </lemma>
             <POS>
-              {getAttr(token, POS1.tokenAnnotationString(_))}
+              {getAttr(token, OntonotesChainPosTagger.tokenAnnotationString(_))}
             </POS>
             <CharacterOffsetBegin>
               {token.stringStart}
@@ -313,10 +309,10 @@ object Document2XmlRenderer {
               {token.stringEnd}
             </CharacterOffsetEnd>
             <NER>
-              {getAttr(token, NER3NoEmbeddings.tokenAnnotationString(_))}
+              {getAttr(token, NoEmbeddingsConllStackedChainNer.tokenAnnotationString(_))}
             </NER>
             <PARSE>
-              {getAttr(token, DepParser1.tokenAnnotationString(_))}
+              {getAttr(token, OntonotesTransitionBasedParser.tokenAnnotationString(_))}
             </PARSE>
             <StartSentence>
               {token.isSentenceStart}
@@ -327,22 +323,22 @@ object Document2XmlRenderer {
           {for (m <- doc.attr[cc.factorie.app.nlp.mention.MentionList]) yield
           <mention>
             <string>
-              {m.span.string}
+              {m.string}
             </string>
             <type>
               {m.attr[MentionType].categoryValue}
             </type>
             <CharacterOffsetBegin>
-              {m.span.tokens.head.stringStart}
+              {m.tokens.head.stringStart}
             </CharacterOffsetBegin>
             <CharacterOffsetEnd>
-              {m.span.tokens.last.stringEnd}
+              {m.tokens.last.stringEnd}
             </CharacterOffsetEnd>
             <TokenBegin>
-              {m.span.tokens.start}
+              {m.tokens.head.position}
             </TokenBegin>
             <TokenEnd>
-              {m.span.tokens.start + m.span.tokens.length}
+              {m.tokens.head.position + m.tokens.length}
             </TokenEnd>
           </mention>}
         </mentions>{if (doc.attr[WikiEntityMentions] != null) {
@@ -350,19 +346,19 @@ object Document2XmlRenderer {
           {for (linkedMention <- doc.attr[WikiEntityMentions]) yield
           <entitylink>
             <name>
-              {linkedMention.mention.span.string}
+              {linkedMention.mention.string}
             </name>
             <CharacterOffsetBegin>
-              {linkedMention.mention.span.tokens.head.stringStart}
+              {linkedMention.mention.tokens.head.stringStart}
             </CharacterOffsetBegin>
             <CharacterOffsetEnd>
-              {linkedMention.mention.span.tokens.last.stringEnd}
+              {linkedMention.mention.tokens.last.stringEnd}
             </CharacterOffsetEnd>
             <TokenBegin>
-              {linkedMention.mention.span.tokens.start}
+              {linkedMention.mention.tokens.head.position}
             </TokenBegin>
             <TokenEnd>
-              {linkedMention.mention.span.tokens.start + linkedMention.mention.span.tokens.length}
+              {linkedMention.mention.tokens.head.position + linkedMention.mention.tokens.length}
             </TokenEnd>{for (c <- linkedMention.entityLinks) yield
             <candidate>
               <id>
@@ -384,7 +380,7 @@ object Document2XmlRenderer {
 
   def getAttr(token: Token, af: (Token) => Any): String = {
     af(token) match {
-      case cv: CategoricalVar[_, String@unchecked] => cv.categoryValue.toString
+      case cv: CategoricalVar[String @unchecked] => cv.categoryValue.toString
       case null => ""
       case v: Any => v.toString
     }
