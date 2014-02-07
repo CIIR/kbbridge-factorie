@@ -9,7 +9,7 @@ import org.lemurproject.galago.core.parse.TagTokenizer
 
 import cc.factorie.app.nlp.ner.{NoEmbeddingsConllStackedChainNer}
 import cc.factorie.app.nlp.parse.{OntonotesTransitionBasedParser}
-import cc.factorie.app.nlp.mention.{NerAndPronounMentionFinder}
+import cc.factorie.app.nlp.coref.mention.NerAndPronounMentionFinder
 
 object FileLinkingAnnotatorMain extends App with Logging {
 

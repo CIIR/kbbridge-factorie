@@ -13,11 +13,12 @@ import org.lemurproject.galago.core.parse.TagTokenizer
 import scala.xml.pull.{EvText, EvElemEnd, EvElemStart, XMLEventReader}
 
 
-import cc.factorie.app.nlp.mention.{NerAndPronounMentionFinder, MentionType, ParseBasedMentionFinding}
 import cc.factorie.app.nlp.pos.{OntonotesForwardPosTagger, OntonotesChainPosTagger}
 import cc.factorie.app.nlp.ner.NoEmbeddingsConllStackedChainNer
 import cc.factorie.app.nlp.parse.OntonotesTransitionBasedParser
 import cc.factorie.variable.CategoricalVar
+import cc.factorie.app.nlp.coref.mention.{MentionList, MentionType, NerAndPronounMentionFinder}
+import org.lemurproject.galago.core.parse.Document.DocumentComponents
 
 object LinkingAnnotatorMain extends App with Logging {
 
@@ -80,10 +81,10 @@ object LinkingAnnotatorMain extends App with Logging {
       val outputFile = new File(outputDir.getAbsolutePath + File.separator + docId + ".xml")
 
       if (testMode || !outputFile.exists()) {
-        var gDoc = retrieval.getDocument(docId, p)
+        var gDoc = retrieval.getDocument(docId, new DocumentComponents(p))
 
         if (gDoc == null) {
-          gDoc = retrieval.getDocument(docId.toLowerCase(), p)
+          gDoc = retrieval.getDocument(docId.toLowerCase(), new DocumentComponents(p))
         }
 
         if (gDoc != null) {
@@ -320,7 +321,7 @@ object Document2XmlRenderer {
           </token>}
         </tokens>
         <mentions>
-          {for (m <- doc.attr[cc.factorie.app.nlp.mention.MentionList]) yield
+          {for (m <- doc.attr[MentionList]) yield
           <mention>
             <string>
               {m.string}

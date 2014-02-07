@@ -1,8 +1,8 @@
 package cc.factorie.app.nlp.el
 
 import collection.mutable.ArrayBuffer
-import cc.factorie.app.nlp.mention.Mention
 import edu.umass.ciir.kbbridge.data.ScoredWikipediaEntity
+import cc.factorie.app.nlp.coref.mention.Mention
 
 /**
  * User: jdalton

@@ -8,7 +8,6 @@ import cc.factorie.app.nlp.pos._
 import edu.umass.ciir.kbbridge.data.{IdMap, ScoredWikipediaEntity, TacEntityMention}
 import cc.factorie.app.nlp.ner.{NoEmbeddingsConllStackedChainNer}
 import cc.factorie.app.nlp.parse.{OntonotesTransitionBasedParser}
-import cc.factorie.app.nlp.mention.{MentionEntityType, MentionType, NerAndPronounMentionFinder}
 import cc.factorie.app.nlp.{Document, DocumentAnnotatorPipeline, MutableDocumentAnnotatorMap}
 import org.xml.sax.InputSource
 import scala.xml.XML
@@ -17,6 +16,8 @@ import edu.umass.ciir.kbbridge.text2kb.{GalagoDoc2WikipediaEntity, QVMLocalTextE
 import edu.umass.ciir.kbbridge.RankLibReranker
 import edu.umass.ciir.kbbridge.nlp.NlpData.NlpXmlNerMention
 import edu.umass.ciir.kbbridge.search.{DocumentBridgeMap, EntityRetrievalWeighting, EntityReprRetrieval}
+import cc.factorie.app.nlp.coref.mention.{MentionEntityType, MentionList, MentionType, NerAndPronounMentionFinder}
+import org.lemurproject.galago.core.parse.Document.DocumentComponents
 
 /**
  * Created with IntelliJ IDEA.
@@ -90,10 +91,10 @@ object TacLinkingMain extends App {
       val outputFile = new File(outputDir.getAbsolutePath + File.separator + m.mentionId + ".xml")
 
       if (testMode || !outputFile.exists()) {
-        var gDoc = retrieval.getDocument(m.docId, p)
+        var gDoc = retrieval.getDocument(m.docId, new DocumentComponents(p))
 
         if (gDoc == null) {
-          gDoc = retrieval.getDocument(m.docId.toLowerCase(), p)
+          gDoc = retrieval.getDocument(m.docId.toLowerCase(), new DocumentComponents(p))
         }
 
         if (gDoc != null) {
@@ -172,7 +173,7 @@ object TacLinkingMain extends App {
     }
 
     def extractNerNeighborhood(doc: Document) = {
-      val neighbors = doc.attr[cc.factorie.app.nlp.mention.MentionList]
+      val neighbors = doc.attr[MentionList]
 
       val namedMentions = neighbors.filter(m => {
         val mType = m.attr[MentionType].categoryValue

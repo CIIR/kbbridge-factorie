@@ -3,7 +3,6 @@ package cc.factorie.app.nlp.el
 import cc.factorie.app.nlp.{Token, Document, DocumentAnnotator}
 import cc.factorie.app.nlp.ner.{ BilouConllNerTag}
 import scala.Predef._
-import cc.factorie.app.nlp.mention.{MentionEntityType, MentionType, Mention, MentionList}
 import edu.umass.ciir.kbbridge.text2kb.KnowledgeBaseCandidateGenerator
 import edu.umass.ciir.kbbridge.RankLibReranker
 import edu.umass.ciir.kbbridge.util.{NameDictionary, ConfInfo, KbBridgeProperties}
@@ -12,6 +11,7 @@ import edu.umass.ciir.kbbridge.nlp.NlpData.NlpXmlNerMention
 import edu.umass.ciir.kbbridge.nlp.TextNormalizer
 import scala.collection.mutable.ListBuffer
 import com.typesafe.scalalogging.slf4j.Logging
+import cc.factorie.app.nlp.coref.mention.{MentionEntityType, Mention, MentionType, MentionList}
 
 /**
  * User: jdalton
@@ -51,7 +51,7 @@ object KbBridgeEntityLinking extends DocumentAnnotator with Logging {
 
     val mentionsToReturn = new WikiEntityMentions
 
-    val neighbors = doc.attr[cc.factorie.app.nlp.mention.MentionList]
+    val neighbors = doc.attr[MentionList]
 
     val namedMentions = neighbors.filter(m => {
       val mType = m.attr[MentionType].categoryValue
