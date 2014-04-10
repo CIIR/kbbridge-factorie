@@ -32,7 +32,7 @@ object TacLinkingMain extends App {
   var tacQueryIds: Set[String] = args(0).split(",").toSet
   val outputDir: File = new File(args(2))
 
-  val tacQueries = TacQueryUtil.allQueries()
+  val tacQueries: Seq[TacEntityMention] = TacQueryUtil.allQueries()
 
   println("starting to link queries: " + tacQueryIds)
   val testQueries = if (tacQueryIds.size > 0) {

@@ -98,7 +98,7 @@ object TacLinkingMain2 extends App {
           (query, annotatedMention)
         } else {
           println("annotation file does not exist, using name query")
-          val galagoQuery = GalagoQueryLib.buildSeqDepForString(m.entityName, Seq())
+          val galagoQuery = GalagoQueryLib.buildSeqDepForString(m.entityName)
           (galagoQuery, m)
         }
 
