@@ -301,7 +301,7 @@ object Document2XmlRenderer {
               {token.string}
             </lemma>
             <POS>
-              {getAttr(token, OntonotesChainPosTagger.tokenAnnotationString(_))}
+              {getAttr(token, OntonotesForwardPosTagger.tokenAnnotationString(_))}
             </POS>
             <CharacterOffsetBegin>
               {token.stringStart}
