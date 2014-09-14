@@ -42,11 +42,13 @@
       <name>IESL Snapshot Repo</name>
       <url>https://dev-iesl.cs.umass.edu/nexus/content/repositories/snapshots</url>
     </repository>
+
       <repository>
           <id>edu.umass.ciir.releases</id>
           <name>CIIR Nexus Releases</name>
           <url>http://scm-ciir.cs.umass.edu:8080/nexus/content/repositories/releases</url>
       </repository>
+
 
   </repositories>
 
@@ -73,7 +75,7 @@
     <dependency>
       <groupId>cc.factorie</groupId>
       <artifactId>factorie</artifactId>
-      <version>1.0-SNAPSHOT</version>
+      <version>1.1-SNAPSHOT</version>
     </dependency>
 
     <dependency>
@@ -99,6 +101,12 @@
       <artifactId>all-models</artifactId>
       <version>1.0-SNAPSHOT</version>
     </dependency>
+
+      <dependency>
+          <groupId>ciir.proteus</groupId>
+          <artifactId>homer</artifactId>
+          <version>0.4-SNAPSHOT</version>
+      </dependency>
 
   </dependencies>
 
