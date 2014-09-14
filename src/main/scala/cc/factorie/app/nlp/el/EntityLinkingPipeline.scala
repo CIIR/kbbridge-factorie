@@ -1,6 +1,7 @@
 package cc.factorie.app.nlp.el
 
 import cc.factorie.app.nlp._
+import cc.factorie.app.nlp.phrase.{BILOUChainChunker, PhraseList, NPChunkMentionFinder, NounPhraseType}
 import org.lemurproject.galago.core.retrieval.{RetrievalFactory, Retrieval}
 import java.io.{StringReader, File}
 import org.lemurproject.galago.tupleflow.Parameters
@@ -17,7 +18,7 @@ import cc.factorie.app.nlp.pos.{OntonotesForwardPosTagger, OntonotesChainPosTagg
 import cc.factorie.app.nlp.ner.NoEmbeddingsConllStackedChainNer
 import cc.factorie.app.nlp.parse.OntonotesTransitionBasedParser
 import cc.factorie.variable.CategoricalVar
-import cc.factorie.app.nlp.coref.mention.{MentionList, MentionType, NerAndPronounMentionFinder}
+import cc.factorie.app.nlp.coref.MentionList
 import org.lemurproject.galago.core.parse.Document.DocumentComponents
 
 object LinkingAnnotatorMain extends App with Logging {
@@ -65,8 +66,9 @@ object LinkingAnnotatorMain extends App with Logging {
       OntonotesForwardPosTagger,
       NoEmbeddingsConllStackedChainNer,
       OntonotesTransitionBasedParser,
-      NerAndPronounMentionFinder,
-      KbBridgeEntityLinking       
+      NPChunkMentionFinder,
+      KbBridgeEntityLinking,
+      BILOUChainChunker
     )
 
   //  NER3.ChainNer2FeaturesDomain.freeze()
@@ -92,7 +94,7 @@ object LinkingAnnotatorMain extends App with Logging {
 
 
           //val docXml = XML.loadString(gDoc.text)
-          // val newsDoc = Text2FactorieDoc.newswire(b)
+          // val newsDoc = Text2Fac  rieDoc.newswire(b)
           val doc = if (!(docId startsWith "bolt"))  {
           val parser = new org.ccil.cowan.tagsoup.jaxp.SAXFactoryImpl().newSAXParser()
           val adapter = new scala.xml.parsing.NoBindingFactoryAdapter
@@ -190,6 +192,7 @@ object Bolt2FactorieDoc {
     offset = 0
     loop(List.empty)
   }
+
 
 
   def addSection(text : String, currNode : List[String], d : Document) {
@@ -321,13 +324,13 @@ object Document2XmlRenderer {
           </token>}
         </tokens>
         <mentions>
-          {for (m <- doc.attr[MentionList]) yield
+          {for (m <- doc.attr[PhraseList]) yield
           <mention>
             <string>
               {m.string}
             </string>
             <type>
-              {m.attr[MentionType].categoryValue}
+              {m.attr[NounPhraseType].categoryValue}
             </type>
             <CharacterOffsetBegin>
               {m.tokens.head.stringStart}
@@ -347,19 +350,19 @@ object Document2XmlRenderer {
           {for (linkedMention <- doc.attr[WikiEntityMentions]) yield
           <entitylink>
             <name>
-              {linkedMention.mention.string}
+              {linkedMention.phrase.string}
             </name>
             <CharacterOffsetBegin>
-              {linkedMention.mention.tokens.head.stringStart}
+              {linkedMention.phrase.tokens.head.stringStart}
             </CharacterOffsetBegin>
             <CharacterOffsetEnd>
-              {linkedMention.mention.tokens.last.stringEnd}
+              {linkedMention.phrase.tokens.last.stringEnd}
             </CharacterOffsetEnd>
             <TokenBegin>
-              {linkedMention.mention.tokens.head.position}
+              {linkedMention.phrase.tokens.head.position}
             </TokenBegin>
             <TokenEnd>
-              {linkedMention.mention.tokens.head.position + linkedMention.mention.tokens.length}
+              {linkedMention.phrase.tokens.head.position + linkedMention.phrase.tokens.length}
             </TokenEnd>{for (c <- linkedMention.entityLinks) yield
             <candidate>
               <id>

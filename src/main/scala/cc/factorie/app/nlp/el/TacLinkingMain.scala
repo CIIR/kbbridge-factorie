@@ -1,23 +1,25 @@
 package cc.factorie.app.nlp.el
 
-import java.io.{StringReader, File}
-import org.lemurproject.galago.tupleflow.Parameters
-import org.lemurproject.galago.core.retrieval.{Retrieval, RetrievalFactory}
-import edu.umass.ciir.kbbridge.tac.TacQueryUtil
+import java.io.{File, StringReader}
+
+import cc.factorie.app.nlp.ner.NoEmbeddingsConllStackedChainNer
+import cc.factorie.app.nlp.parse.OntonotesTransitionBasedParser
+import cc.factorie.app.nlp.phrase.{NPChunkMentionFinder, NounPhraseType, OntonotesPhraseEntityType, PhraseList}
 import cc.factorie.app.nlp.pos._
-import edu.umass.ciir.kbbridge.data.{IdMap, ScoredWikipediaEntity, TacEntityMention}
-import cc.factorie.app.nlp.ner.{NoEmbeddingsConllStackedChainNer}
-import cc.factorie.app.nlp.parse.{OntonotesTransitionBasedParser}
 import cc.factorie.app.nlp.{Document, DocumentAnnotatorPipeline, MutableDocumentAnnotatorMap}
-import org.xml.sax.InputSource
-import scala.xml.XML
-import edu.umass.ciir.kbbridge.util.KbBridgeProperties
-import edu.umass.ciir.kbbridge.text2kb.{GalagoDoc2WikipediaEntity, QVMLocalTextEntityRepr, KnowledgeBaseCandidateGenerator}
 import edu.umass.ciir.kbbridge.RankLibReranker
+import edu.umass.ciir.kbbridge.data.{ScoredWikipediaEntity, TacEntityMention}
 import edu.umass.ciir.kbbridge.nlp.NlpData.NlpXmlNerMention
-import edu.umass.ciir.kbbridge.search.{DocumentBridgeMap, EntityRetrievalWeighting, EntityReprRetrieval}
-import cc.factorie.app.nlp.coref.mention.{MentionEntityType, MentionList, MentionType, NerAndPronounMentionFinder}
+import edu.umass.ciir.kbbridge.search.{DocumentBridgeMap, EntityReprRetrieval, EntityRetrievalWeighting}
+import edu.umass.ciir.kbbridge.tac.TacQueryUtil
+import edu.umass.ciir.kbbridge.text2kb.{GalagoDoc2WikipediaEntity, QVMLocalTextEntityRepr}
+import edu.umass.ciir.kbbridge.util.KbBridgeProperties
 import org.lemurproject.galago.core.parse.Document.DocumentComponents
+import org.lemurproject.galago.core.retrieval.{Retrieval, RetrievalFactory}
+import org.lemurproject.galago.tupleflow.Parameters
+import org.xml.sax.InputSource
+
+import scala.xml.XML
 
 /**
  * Created with IntelliJ IDEA.
@@ -78,7 +80,7 @@ object TacLinkingMain extends App {
       OntonotesForwardPosTagger,
       NoEmbeddingsConllStackedChainNer,
       OntonotesTransitionBasedParser,
-      NerAndPronounMentionFinder
+      NPChunkMentionFinder
     )
 
 
@@ -173,16 +175,16 @@ object TacLinkingMain extends App {
     }
 
     def extractNerNeighborhood(doc: Document) = {
-      val neighbors = doc.attr[MentionList]
+      val neighbors = doc.attr[PhraseList]
 
       val namedMentions = neighbors.filter(m => {
-        val mType = m.attr[MentionType].categoryValue
+        val mType = m.attr[NounPhraseType].categoryValue
         (mType equals "NAM")
       })
 
 
       val allNers = namedMentions.map(m =>  {
-        val eTypeAttr = m.attr[MentionEntityType]
+        val eTypeAttr = m.attr[OntonotesPhraseEntityType]
         val eType = if (eTypeAttr != null) {
           eTypeAttr.categoryValue
         } else {

@@ -1,19 +1,18 @@
 package cc.factorie.app.nlp.el
 
+import java.io.File
+
 import cc.factorie.app.nlp._
-import cc.factorie.app.nlp.pos.{OntonotesForwardPosTagger, OntonotesChainPosTagger}
-import java.io.{File}
-import scala.xml.XML
-import com.typesafe.scalalogging.slf4j.Logging
-import org.lemurproject.galago.core.parse.TagTokenizer
-
-import cc.factorie.app.nlp.ner.{NoEmbeddingsConllStackedChainNer}
-import cc.factorie.app.nlp.parse.{OntonotesTransitionBasedParser}
-import cc.factorie.app.nlp.coref.mention.NerAndPronounMentionFinder
-
+import cc.factorie.app.nlp.ner.NoEmbeddingsConllStackedChainNer
+import cc.factorie.app.nlp.parse.OntonotesTransitionBasedParser
+import cc.factorie.app.nlp.phrase.NPChunkMentionFinder
+import cc.factorie.app.nlp.pos.OntonotesForwardPosTagger
 import ciir.proteus.parse.MBTEIPageParser
+import com.typesafe.scalalogging.slf4j.Logging
 import org.lemurproject.galago.core.types.DocumentSplit
-import org.lemurproject.galago.tupleflow.Parameters
+import org.lemurproject.galago.utility.Parameters
+
+import scala.xml.XML
 
 
 // Params:
@@ -44,7 +43,7 @@ object MBTEILinkingAnnotatorMain extends App with Logging {
       OntonotesForwardPosTagger,
       NoEmbeddingsConllStackedChainNer,
       OntonotesTransitionBasedParser,
-      NerAndPronounMentionFinder,
+      NPChunkMentionFinder,
       KbBridgeEntityLinking
     )
 

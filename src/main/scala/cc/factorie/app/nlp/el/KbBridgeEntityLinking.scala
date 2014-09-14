@@ -1,17 +1,18 @@
 package cc.factorie.app.nlp.el
 
-import cc.factorie.app.nlp.{Token, Document, DocumentAnnotator}
-import cc.factorie.app.nlp.ner.{ BilouConllNerTag}
-import scala.Predef._
-import edu.umass.ciir.kbbridge.text2kb.KnowledgeBaseCandidateGenerator
+import cc.factorie.app.nlp.ner.BilouConllNerTag
+import cc.factorie.app.nlp.phrase._
+import cc.factorie.app.nlp.{Document, DocumentAnnotator, Token}
+import com.typesafe.scalalogging.slf4j.Logging
 import edu.umass.ciir.kbbridge.RankLibReranker
-import edu.umass.ciir.kbbridge.util.{NameDictionary, ConfInfo, KbBridgeProperties}
 import edu.umass.ciir.kbbridge.data.SimpleEntityMention
 import edu.umass.ciir.kbbridge.nlp.NlpData.NlpXmlNerMention
 import edu.umass.ciir.kbbridge.nlp.TextNormalizer
+import edu.umass.ciir.kbbridge.text2kb.KnowledgeBaseCandidateGenerator
+import edu.umass.ciir.kbbridge.util.{KbBridgeProperties, NameDictionary}
+
+import scala.Predef._
 import scala.collection.mutable.ListBuffer
-import com.typesafe.scalalogging.slf4j.Logging
-import cc.factorie.app.nlp.coref.mention.{MentionEntityType, Mention, MentionType, MentionList}
 
 /**
  * User: jdalton
@@ -27,7 +28,7 @@ object KbBridgeEntityLinking extends DocumentAnnotator with Logging {
 
   override def tokenAnnotationString(token:Token): String = {
 
-    val matchingingMention = token.document.attr[WikiEntityMentions].filter(e => e.mention.contains(token))
+    val matchingingMention = token.document.attr[WikiEntityMentions].filter(e => e.phrase.contains(token))
 
     matchingingMention match {
       case wi:Seq[WikiEntity] if wi.length > 0 => wi.map(m => (m.entityLinks take 3).map(e => e.wikipediaTitle + ":" + "%3f".format(e.score)).mkString(",")).mkString(",")
@@ -45,22 +46,24 @@ object KbBridgeEntityLinking extends DocumentAnnotator with Logging {
 //    entString
   }
 
-  def prereqAttrs: Iterable[Class[_]] = List(classOf[BilouConllNerTag], classOf[MentionList])
+  def prereqAttrs: Iterable[Class[_]] = List(classOf[BilouConllNerTag], classOf[PhraseList])
   def postAttrs: Iterable[Class[_]] = List(classOf[WikiEntityMentions])
   def process(doc:Document): Document = {
 
     val mentionsToReturn = new WikiEntityMentions
 
-    val neighbors = doc.attr[MentionList]
+    val neighbors = doc.attr[PhraseList]
 
     val namedMentions = neighbors.filter(m => {
-      val mType = m.attr[MentionType].categoryValue
-      (mType equals "NAM")
+      DeterministicNounPhraseTypeLabeler.process(m)
+      val mType = m.attr[NounPhraseType]
+      val mCat = mType.categoryValue
+      mCat equals "NAM"
     })
 
 
     val allNers = namedMentions.map(m =>  {
-      val eTypeAttr = m.attr[MentionEntityType]
+      val eTypeAttr = m.attr[OntonotesPhraseEntityType]
       val eType = if (eTypeAttr != null) {
         eTypeAttr.categoryValue
       } else {
@@ -91,14 +94,14 @@ object KbBridgeEntityLinking extends DocumentAnnotator with Logging {
     doc
   }
 
-  def cleanMentionString(mention : Mention) = {
+  def cleanMentionString(phrase : Phrase) = {
     val cleanTokens = new ListBuffer[String]
 
-    val mType = mention.attr[MentionType].categoryValue
+    val mType = phrase.attr[NounPhraseType].categoryValue
     val tokens = mType match {
-      case "NOM" => mention.tokens.filter(t => t.posTag.isNoun)
+      case "NOM" => phrase.tokens.filter(t => t.posTag.isNoun)
      // case "NAM" => mention.span.tokens.filter(t => t.posLabel.categoryValue.toUpperCase.startsWith("NN"))
-      case _ => mention.tokens
+      case _ => phrase.tokens
     }
 
    for (token <- tokens) {
@@ -112,22 +115,22 @@ object KbBridgeEntityLinking extends DocumentAnnotator with Logging {
   query.replace(".","")
   }
 
-  def linkEntity(mentions : Seq[Mention], d: Document, text:String, allNers: Seq[NlpXmlNerMention]) : Seq[WikiEntity] = {
+  def linkEntity(phrases : Seq[Phrase], d: Document, text:String, allNers: Seq[NlpXmlNerMention]) : Seq[WikiEntity] = {
 
-    val mention = mentions.head
-    val eTypeAttr = mention.attr[MentionEntityType]
+    val phrase = phrases.head
+    val eTypeAttr = phrase.attr[OntonotesPhraseEntityType]
     val eType = if (eTypeAttr != null) {
       eTypeAttr.categoryValue
     } else {
       "UNK"
     }
 
-    val start =   mention.tokens.head.stringStart
-    val end = mention.tokens.last.stringEnd
+    val start =   phrase.tokens.head.stringStart
+    val end = phrase.tokens.last.stringEnd
 
 
     val bridgeMention = new SimpleEntityMention(d.name, eType, (d.name +"_s"+ (start) +"-" +(end)),
-      entityName=cleanMentionString(mention), fullText=text, corefChain=Seq(), nerNeighbors=allNers, groundTruth="")
+      entityName=cleanMentionString(phrase), fullText=text, corefChain=Seq(), nerNeighbors=allNers, groundTruth="")
 
     println("Fetching candidates for mention: " + bridgeMention.mentionId + " d:" + bridgeMention.docId + " name:" + bridgeMention.entityName)
     val candidates = candidateGenerator.retrieveCandidates(bridgeMention, 50)
@@ -137,6 +140,6 @@ object KbBridgeEntityLinking extends DocumentAnnotator with Logging {
     val t1 = System.currentTimeMillis()
     val diff = t1-t0
     println(s"Reranking time: $diff")
-    mentions.map(m => WikiEntity(m, rerankedResults))
+    phrases.map(m => WikiEntity(m, rerankedResults))
   }
 }

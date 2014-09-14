@@ -1,8 +1,10 @@
 package cc.factorie.app.nlp.el
 
+import cc.factorie.app.nlp.phrase.Phrase
+
 import collection.mutable.ArrayBuffer
 import edu.umass.ciir.kbbridge.data.ScoredWikipediaEntity
-import cc.factorie.app.nlp.coref.mention.Mention
+import cc.factorie.app.nlp.coref.Mention
 
 /**
  * User: jdalton
@@ -10,4 +12,4 @@ import cc.factorie.app.nlp.coref.mention.Mention
  */
 class WikiEntityMentions extends ArrayBuffer[WikiEntity]
 
-case class WikiEntity(val mention:Mention, val entityLinks : Seq[ScoredWikipediaEntity])
+case class WikiEntity(phrase:Phrase, entityLinks : Seq[ScoredWikipediaEntity])
