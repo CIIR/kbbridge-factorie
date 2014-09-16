@@ -4,7 +4,7 @@ import java.io.{File, StringReader}
 
 import cc.factorie.app.nlp.ner.NoEmbeddingsConllStackedChainNer
 import cc.factorie.app.nlp.parse.OntonotesTransitionBasedParser
-import cc.factorie.app.nlp.phrase.{NPChunkMentionFinder, NounPhraseType, OntonotesPhraseEntityType, PhraseList}
+import cc.factorie.app.nlp.phrase._
 import cc.factorie.app.nlp.pos._
 import cc.factorie.app.nlp.{Document, DocumentAnnotatorPipeline, MutableDocumentAnnotatorMap}
 import edu.umass.ciir.kbbridge.RankLibReranker
@@ -178,6 +178,7 @@ object TacLinkingMain extends App {
       val neighbors = doc.attr[PhraseList]
 
       val namedMentions = neighbors.filter(m => {
+//        DeterministicNounPhraseTypeLabeler.process(m)
         val mType = m.attr[NounPhraseType].categoryValue
         (mType equals "NAM")
       })

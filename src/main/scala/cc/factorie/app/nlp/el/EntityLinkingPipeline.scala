@@ -1,7 +1,7 @@
 package cc.factorie.app.nlp.el
 
 import cc.factorie.app.nlp._
-import cc.factorie.app.nlp.phrase.{BILOUChainChunker, PhraseList, NPChunkMentionFinder, NounPhraseType}
+import cc.factorie.app.nlp.phrase._
 import org.lemurproject.galago.core.retrieval.{RetrievalFactory, Retrieval}
 import java.io.{StringReader, File}
 import org.lemurproject.galago.tupleflow.Parameters
@@ -18,7 +18,6 @@ import cc.factorie.app.nlp.pos.{OntonotesForwardPosTagger, OntonotesChainPosTagg
 import cc.factorie.app.nlp.ner.NoEmbeddingsConllStackedChainNer
 import cc.factorie.app.nlp.parse.OntonotesTransitionBasedParser
 import cc.factorie.variable.CategoricalVar
-import cc.factorie.app.nlp.coref.MentionList
 import org.lemurproject.galago.core.parse.Document.DocumentComponents
 
 object LinkingAnnotatorMain extends App with Logging {
@@ -69,6 +68,9 @@ object LinkingAnnotatorMain extends App with Logging {
       NPChunkMentionFinder,
       KbBridgeEntityLinking,
       BILOUChainChunker
+
+      ,NounPhraseEntityTypeLabeler,
+      PosBasedNounPhraseFinder
     )
 
   //  NER3.ChainNer2FeaturesDomain.freeze()
@@ -117,7 +119,20 @@ object LinkingAnnotatorMain extends App with Logging {
           pipeline.process(doc)
 
           println("Processed %d tokens.".format(doc.tokenCount))
-          println(doc.owplString(nlpSteps.map(p => p.tokenAnnotationString(_))))
+          val npl = doc.attr[NounPhraseList]
+          if (npl == null) System.err.println("NPL EMPTY!")
+          else {
+            val onto = npl.head.attr[OntonotesPhraseEntityType]
+            if (onto == null) System.err.println("ONTO EMPTY!")
+          }
+
+
+          try {
+            println(doc.owplString(nlpSteps.map(p => p.tokenAnnotationString(_))))
+          }
+          catch {
+            case  e : NullPointerException => System.err.println("factorie is probably broke ")
+          }
 
           val xml = Document2XmlRenderer.xml(doc)
           //println(xml.toString)
@@ -178,7 +193,7 @@ object Bolt2FactorieDoc {
             loop(label :: currNode)
           case EvElemEnd(_, label) =>
             //println("End element: " + label)
-            if(currNode.head == ("post"))
+            if(currNode.head == "post")
               addSection(d)
             loop(currNode.tail)
           case EvText(text) =>
@@ -304,7 +319,7 @@ object Document2XmlRenderer {
               {token.string}
             </lemma>
             <POS>
-              {getAttr(token, OntonotesForwardPosTagger.tokenAnnotationString(_))}
+              {getAttr(token, OntonotesForwardPosTagger.tokenAnnotationString)}
             </POS>
             <CharacterOffsetBegin>
               {token.stringStart}
@@ -313,10 +328,10 @@ object Document2XmlRenderer {
               {token.stringEnd}
             </CharacterOffsetEnd>
             <NER>
-              {getAttr(token, NoEmbeddingsConllStackedChainNer.tokenAnnotationString(_))}
+              {getAttr(token, NoEmbeddingsConllStackedChainNer.tokenAnnotationString)}
             </NER>
             <PARSE>
-              {getAttr(token, OntonotesTransitionBasedParser.tokenAnnotationString(_))}
+              {getAttr(token, OntonotesTransitionBasedParser.tokenAnnotationString)}
             </PARSE>
             <StartSentence>
               {token.isSentenceStart}
@@ -324,7 +339,7 @@ object Document2XmlRenderer {
           </token>}
         </tokens>
         <mentions>
-          {for (m <- doc.attr[PhraseList]) yield
+          {for (m <- doc.attr[NounPhraseList]) yield
           <mention>
             <string>
               {m.string}

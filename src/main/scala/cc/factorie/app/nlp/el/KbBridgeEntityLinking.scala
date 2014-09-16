@@ -96,7 +96,7 @@ object KbBridgeEntityLinking extends DocumentAnnotator with Logging {
 
   def cleanMentionString(phrase : Phrase) = {
     val cleanTokens = new ListBuffer[String]
-
+//    DeterministicNounPhraseTypeLabeler.process(m)
     val mType = phrase.attr[NounPhraseType].categoryValue
     val tokens = mType match {
       case "NOM" => phrase.tokens.filter(t => t.posTag.isNoun)
