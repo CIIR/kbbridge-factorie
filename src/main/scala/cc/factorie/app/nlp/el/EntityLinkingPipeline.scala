@@ -65,12 +65,11 @@ object LinkingAnnotatorMain extends App with Logging {
       OntonotesForwardPosTagger,
       NoEmbeddingsConllStackedChainNer,
       OntonotesTransitionBasedParser,
-      NPChunkMentionFinder,
-      KbBridgeEntityLinking,
-      BILOUChainChunker
-
-      ,NounPhraseEntityTypeLabeler,
-      PosBasedNounPhraseFinder
+//      NPChunkMentionFinder,
+//      BILOUChainChunker,
+      PosBasedNounPhraseFinder,
+      NounPhraseEntityTypeLabeler,
+      KbBridgeEntityLinking
     )
 
   //  NER3.ChainNer2FeaturesDomain.freeze()
@@ -119,20 +118,7 @@ object LinkingAnnotatorMain extends App with Logging {
           pipeline.process(doc)
 
           println("Processed %d tokens.".format(doc.tokenCount))
-          val npl = doc.attr[NounPhraseList]
-          if (npl == null) System.err.println("NPL EMPTY!")
-          else {
-            val onto = npl.head.attr[OntonotesPhraseEntityType]
-            if (onto == null) System.err.println("ONTO EMPTY!")
-          }
-
-
-          try {
-            println(doc.owplString(nlpSteps.map(p => p.tokenAnnotationString(_))))
-          }
-          catch {
-            case  e : NullPointerException => System.err.println("factorie is probably broke ")
-          }
+          println(doc.owplString(nlpSteps.map(p => p.tokenAnnotationString(_))))
 
           val xml = Document2XmlRenderer.xml(doc)
           //println(xml.toString)
