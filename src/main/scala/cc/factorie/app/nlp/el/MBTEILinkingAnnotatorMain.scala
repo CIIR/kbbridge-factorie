@@ -5,7 +5,7 @@ import java.io.File
 import cc.factorie.app.nlp._
 import cc.factorie.app.nlp.ner.NoEmbeddingsConllStackedChainNer
 import cc.factorie.app.nlp.parse.OntonotesTransitionBasedParser
-import cc.factorie.app.nlp.phrase.NPChunkMentionFinder
+import cc.factorie.app.nlp.phrase.{NounPhraseEntityTypeLabeler, BILOUChainChunker, NPChunkMentionFinder}
 import cc.factorie.app.nlp.pos.OntonotesForwardPosTagger
 import ciir.proteus.parse.MBTEIPageParser
 import com.typesafe.scalalogging.slf4j.Logging
@@ -43,7 +43,9 @@ object MBTEILinkingAnnotatorMain extends App with Logging {
       OntonotesForwardPosTagger,
       NoEmbeddingsConllStackedChainNer,
       OntonotesTransitionBasedParser,
+      BILOUChainChunker,
       NPChunkMentionFinder,
+      NounPhraseEntityTypeLabeler,
       KbBridgeEntityLinking
     )
 

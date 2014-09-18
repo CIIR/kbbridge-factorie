@@ -65,9 +65,8 @@ object LinkingAnnotatorMain extends App with Logging {
       OntonotesForwardPosTagger,
       NoEmbeddingsConllStackedChainNer,
       OntonotesTransitionBasedParser,
-//      NPChunkMentionFinder,
-//      BILOUChainChunker,
-      PosBasedNounPhraseFinder,
+      BILOUChainChunker,
+      NPChunkMentionFinder,
       NounPhraseEntityTypeLabeler,
       KbBridgeEntityLinking
     )
@@ -95,7 +94,7 @@ object LinkingAnnotatorMain extends App with Logging {
 
 
           //val docXml = XML.loadString(gDoc.text)
-          // val newsDoc = Text2Fac  rieDoc.newswire(b)
+          // val newsDoc = Text2FactorieDoc.newswire(b)
           val doc = if (!(docId startsWith "bolt"))  {
           val parser = new org.ccil.cowan.tagsoup.jaxp.SAXFactoryImpl().newSAXParser()
           val adapter = new scala.xml.parsing.NoBindingFactoryAdapter

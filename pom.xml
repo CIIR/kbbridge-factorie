@@ -75,7 +75,7 @@
     <dependency>
       <groupId>cc.factorie</groupId>
       <artifactId>factorie</artifactId>
-      <version>1.1-PAT</version>
+      <version>1.1-SNAPSHOT</version>
     </dependency>
 
     <dependency>

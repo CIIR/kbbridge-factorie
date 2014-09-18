@@ -34,16 +34,16 @@ object KbBridgeEntityLinking extends DocumentAnnotator with Logging {
       case wi:Seq[WikiEntity] if wi.length > 0 => wi.map(m => (m.entityLinks take 3).map(e => e.wikipediaTitle + ":" + "%3f".format(e.score)).mkString(",")).mkString(",")
       case _ => " "
     }
-//      m.attr[MentionType].categoryValue+":"+m.span.indexOf(token)).mkString(","); case _ => "_" }
-//
-//
-//    val entities = token.attr[WikiEntityMentions]
-//    val entString = if (entities != null) {
-//      entities.head.entityLinks.head.wikipediaTitle
-//    } else {
-//      "NIL"
-//    }
-//    entString
+    //      m.attr[MentionType].categoryValue+":"+m.span.indexOf(token)).mkString(","); case _ => "_" }
+    //
+    //
+    //    val entities = token.attr[WikiEntityMentions]
+    //    val entString = if (entities != null) {
+    //      entities.head.entityLinks.head.wikipediaTitle
+    //    } else {
+    //      "NIL"
+    //    }
+    //    entString
   }
 
   def prereqAttrs: Iterable[Class[_]] = List(classOf[BilouConllNerTag], classOf[PhraseList])
@@ -52,7 +52,7 @@ object KbBridgeEntityLinking extends DocumentAnnotator with Logging {
 
     val mentionsToReturn = new WikiEntityMentions
 
-    val neighbors = doc.attr[PhraseList]
+    val neighbors = doc.attr[NounPhraseList]
 
     val namedMentions = neighbors.filter(m => {
       DeterministicNounPhraseTypeLabeler.process(m)
@@ -86,7 +86,7 @@ object KbBridgeEntityLinking extends DocumentAnnotator with Logging {
     println("Num mentions: " + groupedMentions.size + " filtered: " + filtered.size + " limit: 250.")
     val limited = filtered take 250
     mentionsToReturn ++= limited.map(m => linkEntity(m._2, doc, text, allNers)).flatten
-//    mentionsToReturn ++= neighbors.map(m => linkEntity(Seq(m), doc, text, allNers)).flatten
+    //    mentionsToReturn ++= neighbors.map(m => linkEntity(Seq(m), doc, text, allNers)).flatten
 
     doc.attr +=  mentionsToReturn
 
@@ -96,23 +96,23 @@ object KbBridgeEntityLinking extends DocumentAnnotator with Logging {
 
   def cleanMentionString(phrase : Phrase) = {
     val cleanTokens = new ListBuffer[String]
-//    DeterministicNounPhraseTypeLabeler.process(m)
+    //    DeterministicNounPhraseTypeLabeler.process(m)
     val mType = phrase.attr[NounPhraseType].categoryValue
     val tokens = mType match {
       case "NOM" => phrase.tokens.filter(t => t.posTag.isNoun)
-     // case "NAM" => mention.span.tokens.filter(t => t.posLabel.categoryValue.toUpperCase.startsWith("NN"))
+      // case "NAM" => mention.span.tokens.filter(t => t.posLabel.categoryValue.toUpperCase.startsWith("NN"))
       case _ => phrase.tokens
     }
 
-   for (token <- tokens) {
+    for (token <- tokens) {
       val normalToken = TextNormalizer.normalizeText(token.string).replace(" ", "")
       if (normalToken.length() > 0) {
         cleanTokens += normalToken
       }
-  }
+    }
 
-  val query = cleanTokens.mkString(" ")
-  query.replace(".","")
+    val query = cleanTokens.mkString(" ")
+    query.replace(".","")
   }
 
   def linkEntity(phrases : Seq[Phrase], d: Document, text:String, allNers: Seq[NlpXmlNerMention]) : Seq[WikiEntity] = {

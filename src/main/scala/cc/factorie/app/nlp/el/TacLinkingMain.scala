@@ -80,7 +80,10 @@ object TacLinkingMain extends App {
       OntonotesForwardPosTagger,
       NoEmbeddingsConllStackedChainNer,
       OntonotesTransitionBasedParser,
-      NPChunkMentionFinder
+      BILOUChainChunker,
+      NPChunkMentionFinder,
+      NounPhraseEntityTypeLabeler,
+      KbBridgeEntityLinking
     )
 
 
