@@ -1,15 +1,16 @@
 package cc.factorie.app.nlp.el
 
+import java.io.File
+
 import cc.factorie.app.nlp._
-import cc.factorie.app.nlp.pos.{OntonotesForwardPosTagger, OntonotesChainPosTagger}
-import java.io.{ File}
-import scala.xml.XML
+import cc.factorie.app.nlp.ner.NoEmbeddingsConllStackedChainNer
+import cc.factorie.app.nlp.parse.OntonotesTransitionBasedParser
+import cc.factorie.app.nlp.phrase.{NounPhraseEntityTypeLabeler, BILOUChainChunker, NPChunkMentionFinder}
+import cc.factorie.app.nlp.pos.OntonotesForwardPosTagger
 import com.typesafe.scalalogging.slf4j.Logging
 import org.lemurproject.galago.core.parse.TagTokenizer
 
-import cc.factorie.app.nlp.ner.{NoEmbeddingsConllStackedChainNer}
-import cc.factorie.app.nlp.parse.{OntonotesTransitionBasedParser}
-import cc.factorie.app.nlp.coref.mention.NerAndPronounMentionFinder
+import scala.xml.XML
 
 object FileLinkingAnnotatorMain extends App with Logging {
 
@@ -46,7 +47,9 @@ object FileLinkingAnnotatorMain extends App with Logging {
       OntonotesForwardPosTagger,
       NoEmbeddingsConllStackedChainNer,
       OntonotesTransitionBasedParser,
-      NerAndPronounMentionFinder,
+      BILOUChainChunker,
+      NPChunkMentionFinder,
+      NounPhraseEntityTypeLabeler,
       KbBridgeEntityLinking
     )
 

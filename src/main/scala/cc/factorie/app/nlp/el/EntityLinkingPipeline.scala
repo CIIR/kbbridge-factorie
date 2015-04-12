@@ -1,6 +1,7 @@
 package cc.factorie.app.nlp.el
 
 import cc.factorie.app.nlp._
+import cc.factorie.app.nlp.phrase._
 import org.lemurproject.galago.core.retrieval.{RetrievalFactory, Retrieval}
 import java.io.{StringReader, File}
 import org.lemurproject.galago.tupleflow.Parameters
@@ -17,7 +18,6 @@ import cc.factorie.app.nlp.pos.{OntonotesForwardPosTagger, OntonotesChainPosTagg
 import cc.factorie.app.nlp.ner.NoEmbeddingsConllStackedChainNer
 import cc.factorie.app.nlp.parse.OntonotesTransitionBasedParser
 import cc.factorie.variable.CategoricalVar
-import cc.factorie.app.nlp.coref.mention.{MentionList, MentionType, NerAndPronounMentionFinder}
 import org.lemurproject.galago.core.parse.Document.DocumentComponents
 
 object LinkingAnnotatorMain extends App with Logging {
@@ -65,8 +65,10 @@ object LinkingAnnotatorMain extends App with Logging {
       OntonotesForwardPosTagger,
       NoEmbeddingsConllStackedChainNer,
       OntonotesTransitionBasedParser,
-      NerAndPronounMentionFinder,
-      KbBridgeEntityLinking       
+      BILOUChainChunker,
+      NPChunkMentionFinder,
+      NounPhraseEntityTypeLabeler,
+      KbBridgeEntityLinking
     )
 
   //  NER3.ChainNer2FeaturesDomain.freeze()
@@ -176,7 +178,7 @@ object Bolt2FactorieDoc {
             loop(label :: currNode)
           case EvElemEnd(_, label) =>
             //println("End element: " + label)
-            if(currNode.head == ("post"))
+            if(currNode.head == "post")
               addSection(d)
             loop(currNode.tail)
           case EvText(text) =>
@@ -190,6 +192,7 @@ object Bolt2FactorieDoc {
     offset = 0
     loop(List.empty)
   }
+
 
 
   def addSection(text : String, currNode : List[String], d : Document) {
@@ -301,7 +304,7 @@ object Document2XmlRenderer {
               {token.string}
             </lemma>
             <POS>
-              {getAttr(token, OntonotesForwardPosTagger.tokenAnnotationString(_))}
+              {getAttr(token, OntonotesForwardPosTagger.tokenAnnotationString)}
             </POS>
             <CharacterOffsetBegin>
               {token.stringStart}
@@ -310,10 +313,10 @@ object Document2XmlRenderer {
               {token.stringEnd}
             </CharacterOffsetEnd>
             <NER>
-              {getAttr(token, NoEmbeddingsConllStackedChainNer.tokenAnnotationString(_))}
+              {getAttr(token, NoEmbeddingsConllStackedChainNer.tokenAnnotationString)}
             </NER>
             <PARSE>
-              {getAttr(token, OntonotesTransitionBasedParser.tokenAnnotationString(_))}
+              {getAttr(token, OntonotesTransitionBasedParser.tokenAnnotationString)}
             </PARSE>
             <StartSentence>
               {token.isSentenceStart}
@@ -321,13 +324,13 @@ object Document2XmlRenderer {
           </token>}
         </tokens>
         <mentions>
-          {for (m <- doc.attr[MentionList]) yield
+          {for (m <- doc.attr[NounPhraseList]) yield
           <mention>
             <string>
               {m.string}
             </string>
             <type>
-              {m.attr[MentionType].categoryValue}
+              {m.attr[NounPhraseType].categoryValue}
             </type>
             <CharacterOffsetBegin>
               {m.tokens.head.stringStart}
@@ -347,19 +350,19 @@ object Document2XmlRenderer {
           {for (linkedMention <- doc.attr[WikiEntityMentions]) yield
           <entitylink>
             <name>
-              {linkedMention.mention.string}
+              {linkedMention.phrase.string}
             </name>
             <CharacterOffsetBegin>
-              {linkedMention.mention.tokens.head.stringStart}
+              {linkedMention.phrase.tokens.head.stringStart}
             </CharacterOffsetBegin>
             <CharacterOffsetEnd>
-              {linkedMention.mention.tokens.last.stringEnd}
+              {linkedMention.phrase.tokens.last.stringEnd}
             </CharacterOffsetEnd>
             <TokenBegin>
-              {linkedMention.mention.tokens.head.position}
+              {linkedMention.phrase.tokens.head.position}
             </TokenBegin>
             <TokenEnd>
-              {linkedMention.mention.tokens.head.position + linkedMention.mention.tokens.length}
+              {linkedMention.phrase.tokens.head.position + linkedMention.phrase.tokens.length}
             </TokenEnd>{for (c <- linkedMention.entityLinks) yield
             <candidate>
               <id>
